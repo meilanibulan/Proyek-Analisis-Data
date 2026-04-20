@@ -14,8 +14,33 @@ st.set_page_config(
 # ── Load Data ─────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    df = pd.read_csv('dashboard/main_data.csv')
-    df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
+    orders = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/orders_dataset.csv")
+    payments = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/order_payments_dataset.csv")
+    items = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/order_items_dataset.csv")
+    sellers = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/sellers_dataset.csv")
+
+    # Konversi timestamp
+    orders['order_purchase_timestamp'] = pd.to_datetime(orders['order_purchase_timestamp'])
+
+    # Filter 2017-2018 dan delivered
+    orders = orders[
+        (orders['order_purchase_timestamp'].dt.year.isin([2017, 2018])) &
+        (orders['order_status'] == 'delivered')
+    ].copy()
+
+    # Drop missing values
+    orders = orders.dropna(subset=['order_approved_at',
+                                   'order_delivered_carrier_date',
+                                   'order_delivered_customer_date'])
+
+    # Hapus not_defined
+    payments = payments[payments['payment_type'] != 'not_defined'].copy()
+
+    # Merge semua dataset
+    df = orders.merge(payments, on='order_id') \
+               .merge(items, on='order_id') \
+               .merge(sellers, on='seller_id')
+
     return df
 
 df_main = load_data()
@@ -324,4 +349,3 @@ elif page == "📦 Clustering Seller":
     }), use_container_width=True)
 
     st.success("**Insight:** Distribusi seller relatif merata di ketiga kategori. Gap pendapatan antara High Performer dengan Low/Medium sangat signifikan. Platform dapat merancang program insentif berbeda untuk setiap kategori.")
-
