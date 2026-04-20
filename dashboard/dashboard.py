@@ -10,6 +10,38 @@ st.set_page_config(
     page_icon="🛒",
     layout="wide"
 )
+st.markdown("""
+<style>
+/* Background utama */
+.stApp {
+    background-color: #F5F7FB;
+}
+
+/* Container padding */
+.block-container {
+    padding-top: 2rem;
+}
+
+/* Metric card */
+[data-testid="metric-container"] {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.06);
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #FFFFFF;
+}
+
+/* Hilangkan garis aneh */
+hr {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ── Load Data ─────────────────────────────────────────────────
 @st.cache_data
@@ -47,8 +79,9 @@ df_main = load_data()
 
 # ── Sidebar ───────────────────────────────────────────────────
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/197/197386.png", width=90)
-st.sidebar.title("🛒 E-Commerce Brazil")
-st.sidebar.markdown("**Meilani Bulandari Hasibuan**")
+st.sidebar.markdown("## E-Commerce Brazil")
+st.sidebar.caption("Data Analytics Dashboard")
+st.sidebar.markdown("👤 Meilani Bulandari")
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
@@ -71,9 +104,17 @@ colors4 = ['#2563EB', '#3B82F6', '#93C5FD', '#BFDBFE']
 # PAGE: OVERVIEW
 # ══════════════════════════════════════════════════════════════
 if page == "🏠 Overview":
-    st.title("🛒 E-Commerce Brazil — Dashboard Analisis")
-    st.markdown("Analisis data transaksi e-commerce Brazil (Olist Dataset) periode **2017–2018**.")
-    st.markdown("---")
+    st.markdown("### 👋 Good Morning,")
+    st.markdown("## Meilani Bulandari")
+    st.markdown("""
+    <div style="
+    background: linear-gradient(135deg, #4CAF50, #81C784);padding:20px;border-radius:15px;color:white;margin-bottom:20px;
+    ">
+    <h3>Here's what's happening in your sales 📊</h3>
+    <h1>R$ {:,.2f}</h1>
+    <p>Periode 2017–2018</p>
+    </div>
+    """.format(df_filtered['payment_value'].sum()), unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -97,7 +138,9 @@ if page == "🏠 Overview":
     monthly['month'] = monthly['order_purchase_timestamp'].dt.to_period('M').astype(str)
     monthly_agg = monthly.groupby('month')['payment_value'].sum().reset_index()
 
-    fig, ax = plt.subplots(figsize=(12, 4), facecolor='#F8F9FA')
+    fig, ax = plt.subplots(figsize=(12, 4))
+    fig.patch.set_facecolor('#F5F7FB')
+    ax.set_facecolor('white')
     ax.set_facecolor('#FFFFFF')
     ax.plot(monthly_agg['month'], monthly_agg['payment_value'] / 1e3,
             color='#2563EB', linewidth=2.5, marker='o', markersize=4)
