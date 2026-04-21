@@ -7,38 +7,68 @@ import streamlit as st
 # ── Page Config ───────────────────────────────────────────────
 st.set_page_config(
     page_title="E-Commerce Brazil Dashboard",
-    page_icon="🛒",
+    page_icon="🛍️",
     layout="wide"
 )
+
+# ── Custom CSS ────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Background utama */
-.stApp {
-    background-color: #F5F7FB;
+/* Sidebar background */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1a5c38 0%, #2d8653 50%, #3aab69 100%);
 }
 
-/* Container padding */
-.block-container {
-    padding-top: 2rem;
+/* Sidebar text */
+[data-testid="stSidebar"] * {
+    color: white !important;
 }
 
-/* Metric card */
-[data-testid="metric-container"] {
-    background: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.06);
+/* Sidebar radio buttons */
+[data-testid="stSidebar"] .stRadio label {
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    display: block;
+    transition: background 0.2s;
+}
+[data-testid="stSidebar"] .stRadio label:hover {
+    background-color: rgba(255,255,255,0.25);
 }
 
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #FFFFFF;
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border-left: 4px solid #16a34a;
+    border-radius: 10px;
+    padding: 12px 16px;
 }
 
-/* Hilangkan garis aneh */
+/* Dataframe header */
+[data-testid="stDataFrame"] th {
+    background-color: #16a34a !important;
+    color: white !important;
+}
+
+/* Success box */
+.stSuccess {
+    background-color: #f0fdf4;
+    border-left: 4px solid #16a34a;
+}
+
+/* Banner */
+.green-banner {
+    background: linear-gradient(135deg, #15803d, #22c55e);
+    padding: 24px 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    color: white;
+}
+
+/* Divider */
 hr {
-    margin-top: 10px;
-    margin-bottom: 10px;
+    border-color: #bbf7d0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -46,42 +76,21 @@ hr {
 # ── Load Data ─────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    orders = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/orders_dataset.csv")
-    payments = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/order_payments_dataset.csv")
-    items = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/order_items_dataset.csv")
-    sellers = pd.read_csv("https://raw.githubusercontent.com/meilanibulan/E-Commerce-Public-Dataset/main/sellers_dataset.csv")
-
-    # Konversi timestamp
-    orders['order_purchase_timestamp'] = pd.to_datetime(orders['order_purchase_timestamp'])
-
-    # Filter 2017-2018 dan delivered
-    orders = orders[
-        (orders['order_purchase_timestamp'].dt.year.isin([2017, 2018])) &
-        (orders['order_status'] == 'delivered')
-    ].copy()
-
-    # Drop missing values
-    orders = orders.dropna(subset=['order_approved_at',
-                                   'order_delivered_carrier_date',
-                                   'order_delivered_customer_date'])
-
-    # Hapus not_defined
-    payments = payments[payments['payment_type'] != 'not_defined'].copy()
-
-    # Merge semua dataset
-    df = orders.merge(payments, on='order_id') \
-               .merge(items, on='order_id') \
-               .merge(sellers, on='seller_id')
-
+    df = pd.read_csv('dashboard/main_data.csv')
+    df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
     return df
 
 df_main = load_data()
 
 # ── Sidebar ───────────────────────────────────────────────────
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/197/197386.png", width=90)
-st.sidebar.markdown("## E-Commerce Brazil")
-st.sidebar.caption("Data Analytics Dashboard")
-st.sidebar.markdown("👤 Meilani Bulandari")
+st.sidebar.markdown("""
+<div style='text-align:center; padding: 20px 0 10px 0;'>
+    <div style='font-size: 64px;'>🛍️</div>
+    <h2 style='color:white; margin:0; font-size:18px;'>E-Commerce Brazil</h2>
+    <p style='color:rgba(255,255,255,0.8); font-size:13px; margin:4px 0 0 0;'>Meilani Bulandari Hasibuan</p>
+</div>
+""", unsafe_allow_html=True)
+
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
@@ -98,38 +107,48 @@ year_filter = st.sidebar.multiselect(
 
 df_filtered = df_main[df_main['order_purchase_timestamp'].dt.year.isin(year_filter)]
 
-colors4 = ['#2563EB', '#3B82F6', '#93C5FD', '#BFDBFE']
+# Warna hijau Brazil
+GREEN_DARK   = '#15803d'
+GREEN_MID    = '#22c55e'
+GREEN_LIGHT  = '#86efac'
+GREEN_PALE   = '#dcfce7'
+colors_green = [GREEN_DARK, '#16a34a', GREEN_MID, GREEN_LIGHT]
 
 # ══════════════════════════════════════════════════════════════
 # PAGE: OVERVIEW
 # ══════════════════════════════════════════════════════════════
 if page == "🏠 Overview":
-    st.markdown("### 👋 Good Morning,")
-    st.markdown("## Meilani Bulandari")
-    st.markdown("""
-    <div style="
-    background: linear-gradient(135deg, #4CAF50, #81C784);padding:20px;border-radius:15px;color:white;margin-bottom:20px;
-    ">
-    <h3>Here's what's happening in your sales 📊</h3>
-    <h1>R$ {:,.2f}</h1>
-    <p>Periode 2017–2018</p>
-    </div>
-    """.format(df_filtered['payment_value'].sum()), unsafe_allow_html=True)
 
+    # Banner hijau di atas
+    st.markdown(f"""
+    <div class='green-banner'>
+        <div style='display:flex; justify-content:space-between; align-items:center;'>
+            <div>
+                <h1 style='color:white; margin:0; font-size:28px;'>🛍️ E-Commerce Brazil</h1>
+                <p style='color:rgba(255,255,255,0.9); margin:6px 0 0 0; font-size:15px;'>
+                    Dashboard Analisis Transaksi Olist Dataset — Periode 2017–2018
+                </p>
+            </div>
+            <div style='text-align:right;'>
+                <p style='color:rgba(255,255,255,0.8); margin:0; font-size:13px;'>Total Pendapatan</p>
+                <h2 style='color:white; margin:0; font-size:32px;'>
+                    R${df_filtered['payment_value'].sum()/1e6:.2f}M
+                </h2>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Metric cards
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Orders", f"{df_filtered['order_id'].nunique():,}")
+        st.metric("🧾 Total Orders", f"{df_filtered['order_id'].nunique():,}")
     with col2:
-        st.metric("Total Pendapatan", f"R${df_filtered['payment_value'].sum()/1e6:.2f}M")
+        st.metric("💰 Total Pendapatan", f"R${df_filtered['payment_value'].sum()/1e6:.2f}M")
     with col3:
-        st.metric("Jumlah Seller", f"{df_filtered['seller_id'].nunique():,}")
+        st.metric("🏪 Jumlah Seller", f"{df_filtered['seller_id'].nunique():,}")
     with col4:
-        st.metric("Metode Pembayaran", f"{df_filtered['payment_type'].nunique()}")
-
-    st.markdown("---")
-    st.markdown("### 📌 Pertanyaan Bisnis")
-    st.info("**Pertanyaan 1:** Bagaimana perbandingan total nilai transaksi dan rata-rata cicilan antar metode pembayaran pada periode 2017-2018?")
-    st.info("**Pertanyaan 2:** Bagaimana distribusi total pendapatan seller berdasarkan negara bagian pada periode 2017-2018?")
+        st.metric("💳 Metode Pembayaran", f"{df_filtered['payment_type'].nunique()}")
 
     st.markdown("---")
     st.markdown("### 📊 Tren Transaksi Bulanan")
@@ -138,19 +157,17 @@ if page == "🏠 Overview":
     monthly['month'] = monthly['order_purchase_timestamp'].dt.to_period('M').astype(str)
     monthly_agg = monthly.groupby('month')['payment_value'].sum().reset_index()
 
-    fig, ax = plt.subplots(figsize=(12, 4))
-    fig.patch.set_facecolor('#F5F7FB')
-    ax.set_facecolor('white')
+    fig, ax = plt.subplots(figsize=(12, 4), facecolor='#f0fdf4')
     ax.set_facecolor('#FFFFFF')
     ax.plot(monthly_agg['month'], monthly_agg['payment_value'] / 1e3,
-            color='#2563EB', linewidth=2.5, marker='o', markersize=4)
+            color=GREEN_DARK, linewidth=2.5, marker='o', markersize=5)
     ax.fill_between(monthly_agg['month'], monthly_agg['payment_value'] / 1e3,
-                    alpha=0.15, color='#2563EB')
+                    alpha=0.15, color=GREEN_MID)
     ax.set_title('Total Nilai Transaksi per Bulan', fontsize=12, fontweight='bold', color='#1a1a2e')
     ax.set_ylabel('Total Transaksi (Ribu R$)', fontsize=10)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'R${x:.0f}K'))
     ax.tick_params(axis='x', rotation=45)
-    ax.grid(axis='y', linestyle='--', alpha=0.4)
+    ax.grid(axis='y', linestyle='--', alpha=0.4, color=GREEN_LIGHT)
     ax.spines[['top', 'right']].set_visible(False)
     plt.tight_layout()
     st.pyplot(fig)
@@ -159,9 +176,14 @@ if page == "🏠 Overview":
 # PAGE: METODE PEMBAYARAN
 # ══════════════════════════════════════════════════════════════
 elif page == "💳 Metode Pembayaran":
-    st.title("💳 Analisis Metode Pembayaran")
-    st.markdown("**Pertanyaan:** Bagaimana perbandingan total nilai transaksi dan rata-rata cicilan antar metode pembayaran pada periode 2017-2018?")
-    st.markdown("---")
+    st.markdown(f"""
+    <div class='green-banner'>
+        <h1 style='color:white; margin:0; font-size:24px;'>💳 Analisis Metode Pembayaran</h1>
+        <p style='color:rgba(255,255,255,0.85); margin:6px 0 0 0; font-size:13px;'>
+        Bagaimana perbandingan total nilai transaksi dan rata-rata cicilan antar metode pembayaran pada periode 2017-2018?
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     payment_stats = df_filtered.groupby('payment_type').agg(
         total_transaksi=('order_id', 'nunique'),
@@ -183,19 +205,19 @@ elif page == "💳 Metode Pembayaran":
 
     st.markdown("---")
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5), facecolor='#F8F9FA')
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5), facecolor='#f0fdf4')
     fig.suptitle('Perbandingan Metode Pembayaran (2017-2018)',
                  fontsize=13, fontweight='bold', color='#1a1a2e')
 
     ax1 = axes[0]
     bars1 = ax1.bar(payment_stats['label'], payment_stats['total_nilai'] / 1e6,
-                    color=colors4, edgecolor='white', linewidth=1.5, zorder=3)
+                    color=colors_green, edgecolor='white', linewidth=1.5, zorder=3)
     ax1.set_title('Total Nilai Transaksi', fontsize=11, fontweight='bold')
     ax1.set_ylabel('Total Transaksi (Juta R$)', fontsize=10)
     ax1.set_xlabel('Metode Pembayaran', fontsize=10)
     ax1.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'R${x:.1f}M'))
     ax1.set_facecolor('#FFFFFF')
-    ax1.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
+    ax1.grid(axis='y', linestyle='--', alpha=0.5, color=GREEN_PALE, zorder=0)
     ax1.spines[['top', 'right']].set_visible(False)
     for bar in bars1:
         h = bar.get_height()
@@ -205,12 +227,12 @@ elif page == "💳 Metode Pembayaran":
 
     ax2 = axes[1]
     bars2 = ax2.bar(payment_stats['label'], payment_stats['rata_cicilan'],
-                    color=colors4, edgecolor='white', linewidth=1.5, zorder=3)
+                    color=colors_green, edgecolor='white', linewidth=1.5, zorder=3)
     ax2.set_title('Rata-rata Jumlah Cicilan', fontsize=11, fontweight='bold')
     ax2.set_ylabel('Rata-rata Cicilan', fontsize=10)
     ax2.set_xlabel('Metode Pembayaran', fontsize=10)
     ax2.set_facecolor('#FFFFFF')
-    ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
+    ax2.grid(axis='y', linestyle='--', alpha=0.5, color=GREEN_PALE, zorder=0)
     ax2.spines[['top', 'right']].set_visible(False)
     for bar in bars2:
         h = bar.get_height()
@@ -230,7 +252,9 @@ elif page == "💳 Metode Pembayaran":
         'Total Nilai (R$)': 'R${:,.2f}',
         'Rata-rata Nilai (R$)': 'R${:,.2f}',
         'Rata-rata Cicilan': '{:.2f}x'
-    }), use_container_width=True)
+    }).set_table_styles([
+        {'selector': 'thead th', 'props': [('background-color', '#15803d'), ('color', 'white'), ('font-weight', 'bold')]}
+    ]), use_container_width=True)
 
     st.success("**Insight:** Credit Card mendominasi total nilai transaksi (R$12.5M, ~79%) dengan rata-rata cicilan 3.5x. Platform disarankan memperkuat kemitraan dengan penyedia credit card dan menawarkan promo cicilan 0%.")
 
@@ -238,9 +262,14 @@ elif page == "💳 Metode Pembayaran":
 # PAGE: PENDAPATAN PER WILAYAH
 # ══════════════════════════════════════════════════════════════
 elif page == "🗺️ Pendapatan per Wilayah":
-    st.title("🗺️ Distribusi Pendapatan Seller per Negara Bagian")
-    st.markdown("**Pertanyaan:** Bagaimana distribusi total pendapatan seller berdasarkan negara bagian pada periode 2017-2018?")
-    st.markdown("---")
+    st.markdown(f"""
+    <div class='green-banner'>
+        <h1 style='color:white; margin:0; font-size:24px;'>🗺️ Distribusi Pendapatan Seller per Negara Bagian</h1>
+        <p style='color:rgba(255,255,255,0.85); margin:6px 0 0 0; font-size:13px;'>
+        Bagaimana distribusi total pendapatan seller berdasarkan negara bagian pada periode 2017-2018?
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     state_stats = df_filtered.groupby('seller_state').agg(
         jumlah_seller=('seller_id', 'nunique'),
@@ -250,20 +279,20 @@ elif page == "🗺️ Pendapatan per Wilayah":
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Negara Bagian Tertinggi", state_stats.iloc[0]['seller_state'],
+        st.metric("🏆 Negara Bagian Tertinggi", state_stats.iloc[0]['seller_state'],
                   delta=f"R${state_stats.iloc[0]['total_pendapatan']/1e6:.1f}M")
     with col2:
-        st.metric("Total Negara Bagian", f"{len(state_stats)}")
+        st.metric("🗺️ Total Negara Bagian", f"{len(state_stats)}")
     with col3:
-        st.metric("Rata-rata per State", f"R${state_stats['total_pendapatan'].mean()/1e3:.1f}K")
+        st.metric("📊 Rata-rata per State", f"R${state_stats['total_pendapatan'].mean()/1e3:.1f}K")
 
     st.markdown("---")
 
     top_n = st.slider("Tampilkan Top N Negara Bagian", min_value=5, max_value=len(state_stats), value=15)
     p2 = state_stats.head(top_n).sort_values('total_pendapatan', ascending=True)
-    colors_p2 = plt.cm.Blues(np.linspace(0.3, 0.9, len(p2)))
+    colors_p2 = plt.cm.Greens(np.linspace(0.3, 0.9, len(p2)))
 
-    fig, ax = plt.subplots(figsize=(11, max(5, top_n * 0.4)), facecolor='#F8F9FA')
+    fig, ax = plt.subplots(figsize=(11, max(5, top_n * 0.4)), facecolor='#f0fdf4')
     ax.set_facecolor('#FFFFFF')
     bars = ax.barh(p2['seller_state'], p2['total_pendapatan'] / 1e6,
                    color=colors_p2, edgecolor='white', linewidth=0.8, zorder=3)
@@ -272,7 +301,7 @@ elif page == "🗺️ Pendapatan per Wilayah":
     ax.set_xlabel('Total Pendapatan (Juta R$)', fontsize=10)
     ax.set_ylabel('Negara Bagian', fontsize=10)
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'R${x:.1f}M'))
-    ax.grid(axis='x', linestyle='--', alpha=0.5, zorder=0)
+    ax.grid(axis='x', linestyle='--', alpha=0.5, color=GREEN_PALE, zorder=0)
     ax.spines[['top', 'right']].set_visible(False)
     for bar in bars:
         w = bar.get_width()
@@ -289,7 +318,9 @@ elif page == "🗺️ Pendapatan per Wilayah":
     st.dataframe(state_display.style.format({
         'Total Pendapatan (R$)': 'R${:,.2f}',
         'Rata-rata Pendapatan (R$)': 'R${:,.2f}'
-    }), use_container_width=True)
+    }).set_table_styles([
+        {'selector': 'thead th', 'props': [('background-color', '#15803d'), ('color', 'white'), ('font-weight', 'bold')]}
+    ]), use_container_width=True)
 
     st.success("**Insight:** São Paulo (SP) mendominasi dengan R$13.3M (~65% total). Terdapat kesenjangan besar antara SP dengan negara bagian lain, menunjukkan peluang ekspansi bisnis yang besar.")
 
@@ -297,9 +328,14 @@ elif page == "🗺️ Pendapatan per Wilayah":
 # PAGE: CLUSTERING SELLER
 # ══════════════════════════════════════════════════════════════
 elif page == "📦 Clustering Seller":
-    st.title("📦 Clustering Seller Berdasarkan Performa")
-    st.markdown("Pengelompokan seller ke dalam kategori **Low**, **Medium**, dan **High Performer** menggunakan teknik Binning berdasarkan total pendapatan.")
-    st.markdown("---")
+    st.markdown("""
+    <div class='green-banner'>
+        <h1 style='color:white; margin:0; font-size:24px;'>📦 Clustering Seller Berdasarkan Performa</h1>
+        <p style='color:rgba(255,255,255,0.85); margin:6px 0 0 0; font-size:13px;'>
+        Pengelompokan seller ke dalam kategori Low, Medium, dan High Performer menggunakan teknik Binning.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
     seller_perf = df_filtered.groupby('seller_id').agg(
         total_revenue=('payment_value', 'sum'),
@@ -327,19 +363,19 @@ elif page == "📦 Clustering Seller":
         st.metric("🔵 Low Performer", f"{n_low:,} seller", delta=f"<= R${q33:,.0f}")
     with col2:
         n_med = (seller_perf['category'] == 'Medium Performer').sum()
-        st.metric("🔷 Medium Performer", f"{n_med:,} seller", delta=f"R${q33:,.0f} – R${q66:,.0f}")
+        st.metric("🟡 Medium Performer", f"{n_med:,} seller", delta=f"R${q33:,.0f} – R${q66:,.0f}")
     with col3:
         n_high = (seller_perf['category'] == 'High Performer').sum()
         st.metric("🏆 High Performer", f"{n_high:,} seller", delta=f"> R${q66:,.0f}")
 
     st.markdown("---")
 
-    category_order = ['Low Performer', 'Medium Performer', 'High Performer']
-    colors_cluster = ['#93C5FD', '#3B82F6', '#1D4ED8']
-    count_data = seller_perf['category'].value_counts().reindex(category_order)
-    avg_rev_data = seller_perf.groupby('category')['total_revenue'].mean().reindex(category_order)
+    category_order  = ['Low Performer', 'Medium Performer', 'High Performer']
+    colors_cluster  = ['#86efac', '#22c55e', '#15803d']
+    count_data      = seller_perf['category'].value_counts().reindex(category_order)
+    avg_rev_data    = seller_perf.groupby('category')['total_revenue'].mean().reindex(category_order)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5), facecolor='#F8F9FA')
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5), facecolor='#f0fdf4')
     fig.suptitle('Clustering Seller Berdasarkan Performa Pendapatan (2017-2018)',
                  fontsize=12, fontweight='bold', color='#1a1a2e')
 
@@ -349,7 +385,7 @@ elif page == "📦 Clustering Seller":
     ax1.set_title('Jumlah Seller per Kategori', fontsize=11, fontweight='bold')
     ax1.set_ylabel('Jumlah Seller', fontsize=10)
     ax1.set_facecolor('#FFFFFF')
-    ax1.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
+    ax1.grid(axis='y', linestyle='--', alpha=0.5, color=GREEN_PALE, zorder=0)
     ax1.spines[['top', 'right']].set_visible(False)
     for bar in bars1:
         h = bar.get_height()
@@ -364,7 +400,7 @@ elif page == "📦 Clustering Seller":
     ax2.set_ylabel('Rata-rata Pendapatan (Ribu R$)', fontsize=10)
     ax2.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f'R${x:.1f}K'))
     ax2.set_facecolor('#FFFFFF')
-    ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
+    ax2.grid(axis='y', linestyle='--', alpha=0.5, color=GREEN_PALE, zorder=0)
     ax2.spines[['top', 'right']].set_visible(False)
     for bar in bars2:
         h = bar.get_height()
@@ -389,6 +425,8 @@ elif page == "📦 Clustering Seller":
         'Avg Revenue (R$)': 'R${:,.2f}',
         'Avg Orders': '{:.1f}',
         'Avg Items': '{:.1f}'
-    }), use_container_width=True)
+    }).set_table_styles([
+        {'selector': 'thead th', 'props': [('background-color', '#15803d'), ('color', 'white'), ('font-weight', 'bold')]}
+    ]), use_container_width=True)
 
     st.success("**Insight:** Distribusi seller relatif merata di ketiga kategori. Gap pendapatan antara High Performer dengan Low/Medium sangat signifikan. Platform dapat merancang program insentif berbeda untuk setiap kategori.")
